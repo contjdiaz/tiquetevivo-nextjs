@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+/* Evita scroll horizontal a nivel página en pantallas estrechas (320-360px).
+   clip no crea scroll container, así que position:sticky sigue funcionando. */
+html {
+  overflow-x: clip;
+}
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* Paleta de marca dinámica: se deriva de --theme-primary (color del negocio).
+     Se inyecta vía React (lib/brand-theme.ts) en las vistas que cargan config. */
+  --color-brand-base: var(--theme-primary, #289a71);
+  --color-brand-50: color-mix(in srgb, var(--color-brand-base) 8%, white);
+  --color-brand-100: color-mix(in srgb, var(--color-brand-base) 16%, white);
+  --color-brand-200: color-mix(in srgb, var(--color-brand-base) 30%, white);
+  --color-brand-300: color-mix(in srgb, var(--color-brand-base) 46%, white);
+  --color-brand-400: color-mix(in srgb, var(--color-brand-base) 64%, white);
+  --color-brand-500: var(--color-brand-base);
+  --color-brand-600: color-mix(in srgb, var(--color-brand-base) 80%, black);
+  --color-brand-700: color-mix(in srgb, var(--color-brand-base) 62%, black);
+  --color-brand-800: color-mix(in srgb, var(--color-brand-base) 45%, black);
+  --color-brand-900: color-mix(in srgb, var(--color-brand-base) 30%, black);
+  --color-brand-950: color-mix(in srgb, var(--color-brand-base) 16%, black);
+
+  --color-accent-50: #fffbeb;
+  --color-accent-100: #fef3c7;
+  --color-accent-200: #fde68a;
+  --color-accent-300: #fcd34d;
+  --color-accent-400: #fbbf24;
+  --color-accent-500: #f59e0b;
+  --color-accent-600: #d97706;
+  --color-accent-700: #b45309;
+  --color-accent-800: #92400e;
+  --color-accent-900: #78350f;
+
+  /* Semánticos: éxito, advertencia, error, info */
+  --color-success-50: #ecfdf5;
+  --color-success-100: #d1fae5;
+  --color-success-200: #a7f3d0;
+  --color-success-300: #6ee7b7;
+  --color-success-400: #34d399;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-success-800: #065f46;
+  --color-success-900: #064e3b;
+
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+
+  --color-error-50: #fef2f2;
+  --color-error-100: #fee2e2;
+  --color-error-200: #fecaca;
+  --color-error-300: #fca5a5;
+  --color-error-400: #f87171;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
+  --color-error-700: #b91c1c;
+  --color-error-800: #991b1b;
+  --color-error-900: #7f1d1d;
+
+  --color-info-50: #eff6ff;
+  --color-info-100: #dbeafe;
+  --color-info-200: #bfdbfe;
+  --color-info-300: #93c5fd;
+  --color-info-400: #60a5fa;
+  --color-info-500: #3b82f6;
+  --color-info-600: #2563eb;
+  --color-info-700: #1d4ed8;
+  --color-info-800: #1e40af;
+  --color-info-900: #1e3a8a;
+
+  /* Chat simulado de WhatsApp (autocontenido, no hereda dark) */
+  --color-whatsapp-brand: #075e54;
+  --color-whatsapp-bg: #e5ddd5;
+  --color-whatsapp-bubble: #dcf8c6;
+
+  /* Radios estandarizados */
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.06), 0 4px 16px rgb(15 23 42 / 0.06);
+  --shadow-card-hover: 0 2px 4px rgb(15 23 42 / 0.08), 0 12px 32px rgb(15 23 42 / 0.12);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  body:not([data-theme="light"]) {
+    @apply bg-slate-950 text-slate-100;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+}

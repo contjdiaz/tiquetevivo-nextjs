@@ -1,0 +1,5 @@
+[functions]
+  directory = "netlify/functions"
+
+[functions."cron-reactivation"]
+  schedule = "0 14 * * *"

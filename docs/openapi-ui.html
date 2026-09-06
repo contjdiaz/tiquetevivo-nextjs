@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TiqueteVivo API — Swagger UI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui.css" integrity="sha512-+r3x0p1mH6b1J6eCk6d4T1G5Kqv1i3j0qK9G5F88h0p3n8x6J3Gg1Y6Jv9k2yF5V1uWg==" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <style>html,body{height:100%;margin:0;}#swagger-ui{height:100vh;}</style>
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.18.3/swagger-ui-bundle.js" integrity="sha512-+t0Ej..." crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+      window.onload = function() {
+        const ui = SwaggerUIBundle({
+          url: 'openapi-draft.yaml',
+          dom_id: '#swagger-ui',
+          deepLinking: true,
+          presets: [SwaggerUIBundle.presets.apis],
+          layout: 'BaseLayout'
+        })
+        window.ui = ui
+      }
+    </script>
+  </body>
+</html>
