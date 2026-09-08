@@ -1,0 +1,234 @@
+/**
+ * Unit Test: Photo evidence on order delivery
+ * Feature: photo-evidence
+ *
+ * Validates that update-order stores a delivery photo when provided as a base64 data URL.
+ */
+
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+let capturedPayload = null;
+let currentBusinessPlan = "paid";
+
+function createSupabaseMock() {
+  return {
+    from: (table) => {
+      if (table === "businesses") {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              single: vi.fn(() =>
+                Promise.resolve({
+                  data: { id: "biz-photo-1", slug: "majesty", name: "Majesty", active: true, plan: currentBusinessPlan },
+                  error: null
+                })
+              )
+            }))
+          }))
+        };
+      }
+      if (table === "orders") {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              single: vi.fn(() =>
+                Promise.resolve({
+                  data: {
+                    id: "order-photo-123",
+                    order_number: "1234",
+                    customer_phone: "573102688991",
+                    business_id: "biz-photo-1",
+                    status: "READY",
+                    custom_fields: {}
+                  },
+                  error: null
+                })
+              )
+            }))
+          })),
+          update: vi.fn((payload) => {
+            if (!capturedPayload) {
+              capturedPayload = { ...payload };
+            }
+            return {
+              eq: vi.fn(() => ({
+                select: vi.fn(() => ({
+                  single: vi.fn(() =>
+                    Promise.resolve({
+                      data: { ...payload, id: "order-photo-123", business_id: "biz-photo-1" },
+                      error: null
+                    })
+                  )
+                }))
+              }))
+            };
+          })
+        };
+      }
+      return {
+        insert: vi.fn(() => ({
+          select: vi.fn(() => ({
+            single: vi.fn(() => Promise.resolve({ data: {}, error: null }))
+          }))
+        })),
+        update: vi.fn(() => ({
+          eq: vi.fn(() => Promise.resolve({ data: {}, error: null }))
+        }))
+      };
+    }
+  };
+}
+
+vi.mock("@/lib/api/_utils", () => ({
+  supabaseAdmin: vi.fn(() => createSupabaseMock()),
+  getBusinessBySlug: vi.fn().mockResolvedValue({ id: "biz-photo-1", slug: "majesty", name: "Majesty", active: true, plan: "paid" }),
+  requireAuth: vi.fn().mockResolvedValue({ user: { id: "auth-user-1" }, role: "owner" }),
+  json: (statusCode, body) => ({
+    statusCode,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  }),
+  parseBody: (event) => {
+    if (!event.body) return {};
+    return JSON.parse(event.body);
+  }
+}));
+
+vi.mock("@/lib/api/_sheets", () => ({
+  mirrorOrderToSheets: vi.fn().mockResolvedValue({})
+}));
+
+vi.mock("@/lib/api/_whatsapp", () => ({
+  sendWhatsAppMessage: vi.fn().mockResolvedValue({ success: true, messageId: "msg-123" }),
+  buildFallbackLink: vi.fn().mockReturnValue("https://wa.me/123"),
+  logWhatsAppMessage: vi.fn().mockResolvedValue({})
+}));
+
+vi.mock("@/lib/api/_vertical-config", () => ({
+  getBusinessConfig: vi.fn().mockResolvedValue({
+    id: "biz-photo-1",
+    slug: "majesty",
+    name: "Majesty",
+    services_config: [],
+    custom_fields_config: [],
+    status_flow_config: [
+      { status_key: "RECEIVED", display_label: "Recibido" },
+      { status_key: "IN_PROGRESS", display_label: "En proceso" },
+      { status_key: "READY", display_label: "Listo" },
+      { status_key: "DELIVERED", display_label: "Entregado" }
+    ],
+    whatsapp_templates_config: {},
+    vertical: { whatsapp_templates_default: {} }
+  })
+}));
+
+vi.mock("@/lib/api/_template-engine", () => ({
+  selectTemplate: vi.fn().mockReturnValue("Delivered message"),
+  renderTemplate: vi.fn().mockReturnValue("Delivered message")
+}));
+
+vi.mock("@/lib/api/_photo-storage", () => ({
+  validatePhoto: vi.fn((input) => {
+    if (!input || typeof input !== "string") {
+      return { valid: false, error: "Photo data is required and must be a string" };
+    }
+    const match = input.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) {
+      return { valid: false, error: "Invalid photo format. Expected a base64 data URL" };
+    }
+    const mimeType = match[1].toLowerCase();
+    const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!allowed.includes(mimeType)) {
+      return { valid: false, error: "Unsupported image format. Accepted: JPEG, PNG, GIF, WebP" };
+    }
+    return { valid: true, mimeType, sizeBytes: 1024 };
+  }),
+  uploadPhoto: vi.fn().mockResolvedValue({ path: "biz-photo-1/order-photo-123/delivery.jpg" }),
+  getSignedPhotoUrl: vi.fn().mockResolvedValue("https://storage.example.com/signed-url")
+}));
+
+import { handler } from "@/app/api/update-order/impl";
+
+describe("Feature: photo-evidence on order delivery", () => {
+  beforeEach(() => {
+    capturedPayload = null;
+    currentBusinessPlan = "paid";
+    vi.clearAllMocks();
+  });
+
+  it("stores delivery_photo_url and delivery_photo_taken_at when deliveryPhoto is provided", async () => {
+    const deliveryPhoto = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ";
+    const event = {
+      httpMethod: "PUT",
+      body: JSON.stringify({
+        id: "order-photo-123",
+        business_id: "biz-photo-1",
+        status: "DELIVERED",
+        deliveryPhoto
+      })
+    };
+
+    const response = await handler(event);
+    const body = JSON.parse(response.body);
+
+    expect(response.statusCode).toBe(200);
+    expect(capturedPayload).not.toBeNull();
+    expect(capturedPayload.delivery_photo_url).toBe("biz-photo-1/order-photo-123/delivery.jpg");
+    expect(capturedPayload.delivery_photo_taken_at).toBeDefined();
+    expect(body.delivery_photo_url).toBe("biz-photo-1/order-photo-123/delivery.jpg");
+  });
+
+  it("rejects invalid deliveryPhoto values", async () => {
+    const event = {
+      httpMethod: "PUT",
+      body: JSON.stringify({
+        id: "order-photo-123",
+        business_id: "biz-photo-1",
+        status: "DELIVERED",
+        deliveryPhoto: "not-a-data-url"
+      })
+    };
+
+    const response = await handler(event);
+    expect(response.statusCode).toBe(400);
+    const body = JSON.parse(response.body);
+    expect(body.error).toBe(true);
+    expect(body.field).toBe("deliveryPhoto");
+  });
+
+  it("does not include delivery photo columns when no deliveryPhoto is provided", async () => {
+    const event = {
+      httpMethod: "PUT",
+      body: JSON.stringify({
+        id: "order-photo-123",
+        business_id: "biz-photo-1",
+        status: "DELIVERED"
+      })
+    };
+
+    const response = await handler(event);
+    expect(response.statusCode).toBe(200);
+    expect(capturedPayload.delivery_photo_url).toBeUndefined();
+    expect(capturedPayload.delivery_photo_taken_at).toBeUndefined();
+  });
+
+  it("rejects deliveryPhoto for free plan businesses", async () => {
+    currentBusinessPlan = "free";
+
+    const event = {
+      httpMethod: "PUT",
+      body: JSON.stringify({
+        id: "order-photo-123",
+        business_id: "biz-photo-1",
+        status: "DELIVERED",
+        deliveryPhoto: "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ"
+      })
+    };
+
+    const response = await handler(event);
+    expect(response.statusCode).toBe(403);
+    const body = JSON.parse(response.body);
+    expect(body.error).toBe(true);
+    expect(body.message).toMatch(/paid plan/i);
+  });
+});

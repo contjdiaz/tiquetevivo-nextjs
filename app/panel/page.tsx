@@ -7,6 +7,8 @@ import { QRCodeSVG } from "qrcode.react";
 import Button from "@/components/ui/Button";
 import StatusTag from "@/components/ui/StatusTag";
 import { useBrandTheme } from "@/lib/brand-theme";
+import { isFruverVertical } from "@/lib/fruver/vertical";
+import FruverPanel from "./fruver/FruverPanel";
 import {
   apiFetch,
   apiGetJSON,
@@ -705,6 +707,10 @@ function OrderForm({ config, slug, onCreated, toastFn }: {
   const services = (config.services_config || []).filter((s: any) => s.active !== false);
   const stateLabels = getStatusLabels(config);
   const statusKeys = [...(config.status_flow_config || []).map((s: any) => s.status_key)];
+  // Detecta el vertical para adaptar plantillas y textos del formulario, en
+  // lugar de mostrar los valores de lavandería (Maktub) por defecto.
+  const isFruver = isFruverVertical({ verticalName: config.vertical_name, businessSlug: config.business_slug });
+  const detailPlaceholder = isFruver ? "Ej: 2 kg tomate, 1 lechuga, 3 bananos" : "Ej: 1 sábana, 2 camisas";
 
   const selectedService = services.find((s: any) => s.name === form.serviceType);
 
@@ -752,36 +758,51 @@ function OrderForm({ config, slug, onCreated, toastFn }: {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
-      <label className="block text-sm font-bold text-slate-700">
-        Tipo de Servicio
-        <select className="input" value={form.serviceType}
-          onChange={(e) => {
-            const name = e.target.value;
-            if (name === "") { set("serviceType", ""); return; }
-            const svc = services.find((s: any) => s.name === name);
-            set("serviceType", name);
-            if (svc && svc.default_price) set("total", String(svc.default_price));
-          }}>
-          <option value="">Selecciona...</option>
-          {services.map((s: any) => (
-            <option key={s.name} value={s.name}>
-              {s.name}{s.default_price ? ` - ${money.format(s.default_price)}${s.unit === "per_kg" ? "/kg" : s.unit === "per_item" ? "/und" : s.unit === "per_hour" ? "/hr" : ""}` : ""}
-            </option>
-          ))}
-        </select>
-        {selectedService?.description && (
-          <small className="block text-[11px] font-semibold text-slate-500">ℹ️ {selectedService.description}</small>
-        )}
-      </label>
+      {/* El selector de servicios solo aplica a verticales con servicios
+          configurados (p. ej. lavandería). En fruver el detalle es libre y los
+          productos se manejan por cotización, así que se oculta si no hay. */}
+      {services.length > 0 && (
+        <label className="block text-sm font-bold text-slate-700">
+          Tipo de Servicio
+          <select className="input" value={form.serviceType}
+            onChange={(e) => {
+              const name = e.target.value;
+              if (name === "") { set("serviceType", ""); return; }
+              const svc = services.find((s: any) => s.name === name);
+              set("serviceType", name);
+              if (svc && svc.default_price) set("total", String(svc.default_price));
+            }}>
+            <option value="">Selecciona...</option>
+            {services.map((s: any) => (
+              <option key={s.name} value={s.name}>
+                {s.name}{s.default_price ? ` - ${money.format(s.default_price)}${s.unit === "per_kg" ? "/kg" : s.unit === "per_item" ? "/und" : s.unit === "per_hour" ? "/hr" : ""}` : ""}
+              </option>
+            ))}
+          </select>
+          {selectedService?.description && (
+            <small className="block text-[11px] font-semibold text-slate-500">ℹ️ {selectedService.description}</small>
+          )}
+        </label>
+      )}
 
       <label className="block text-sm font-bold text-slate-700">
         Plantilla WhatsApp
         <select className="input" value={form.templateName} onChange={(e) => set("templateName", e.target.value)}>
-          <option value="default">🐧 Recibo Estándar + Tiquete Digital</option>
-          <option value="maktub_recogida">🚚 Recogida a Domicilio</option>
-          <option value="maktub_en_entrega">🛵 En Camino a Domicilio</option>
-          <option value="maktub_remision_b2b">🏨 Remisión B2B (Por Kilos)</option>
-          <option value="maktub_cobro">💸 Recordatorio de Cobro</option>
+          {isFruver ? (
+            <>
+              <option value="default">🥬 Recibo del Pedido + Tiquete Digital</option>
+              <option value="maktub_en_entrega">🛵 En Camino a Domicilio</option>
+              <option value="maktub_cobro">💸 Recordatorio de Cobro</option>
+            </>
+          ) : (
+            <>
+              <option value="default">🐧 Recibo Estándar + Tiquete Digital</option>
+              <option value="maktub_recogida">🚚 Recogida a Domicilio</option>
+              <option value="maktub_en_entrega">🛵 En Camino a Domicilio</option>
+              <option value="maktub_remision_b2b">🏨 Remisión B2B (Por Kilos)</option>
+              <option value="maktub_cobro">💸 Recordatorio de Cobro</option>
+            </>
+          )}
         </select>
       </label>
 
@@ -809,7 +830,7 @@ function OrderForm({ config, slug, onCreated, toastFn }: {
 
       <label className="block text-sm font-bold text-slate-700">
         Detalle
-        <textarea className="input" rows={2} required value={form.itemsText} placeholder="Ej: 1 sábana, 2 camisas" onChange={(e) => set("itemsText", e.target.value)} />
+        <textarea className="input" rows={2} required value={form.itemsText} placeholder={detailPlaceholder} onChange={(e) => set("itemsText", e.target.value)} />
       </label>
 
       {paid && (
@@ -1168,11 +1189,18 @@ function PanelInner() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [view, setView] = useState<"table" | "kanban">("table");
+  // Top-level panel tab. The "Fruver" tab only appears for fruver businesses.
+  const [panelTab, setPanelTab] = useState<"orders" | "fruver">("orders");
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSizeState] = useState<number>(() => {
-    const stored = parseInt(localStorage.getItem("tiquete_page_size") || "25", 10);
-    return [10, 25, 50, 100].includes(stored) ? stored : 25;
-  });
+  // Default to 25 on the server (no localStorage during SSR); the stored
+  // preference is hydrated on the client in the effect below.
+  const [pageSize, setPageSizeState] = useState<number>(25);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = parseInt(window.localStorage.getItem("tiquete_page_size") || "25", 10);
+    if ([10, 25, 50, 100].includes(stored)) setPageSizeState(stored);
+  }, []);
 
   const [qrOrder, setQrOrder] = useState<any>(null);
   const [deliveryPhotoFor, setDeliveryPhotoFor] = useState<any>(null);
@@ -1395,6 +1423,15 @@ function PanelInner() {
 
   function resetPage() { setCurrentPage(1); }
 
+  // Detect the fruver vertical from the loaded config to gate the Fruver tab
+  // (R4.1, R5.4, R6.1). If the active business is not fruver, force the tab
+  // back to orders so a stale selection never hides the orders view.
+  const isFruver = isFruverVertical({
+    verticalName: config.vertical_name,
+    businessSlug: config.business_slug || slug
+  });
+  const activePanelTab = isFruver ? panelTab : "orders";
+
   function changeSlug(newSlug: string) {
     if (!newSlug) return;
     window.location.href = `/panel?slug=${encodeURIComponent(newSlug)}`;
@@ -1452,13 +1489,35 @@ function PanelInner() {
           <div className="sticky top-0 z-30 border-b border-slate-100 bg-white/95 backdrop-blur">
             <div className="mx-auto flex max-w-[1400px] flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="font-display text-2xl font-extrabold text-slate-900">Pedidos del día</h1>
+                <h1 className="font-display text-2xl font-extrabold text-slate-900">
+                  {activePanelTab === "fruver" ? "Panel Fruver" : "Pedidos del día"}
+                </h1>
                 <div className="text-sm text-slate-500">
                   <span className="font-extrabold">{config.vertical_emoji}{config.vertical_emoji ? " " : ""}{config.business_name}</span>
                 </div>
+                {isFruver && (
+                  <div role="tablist" aria-label="Secciones del panel" className="mt-3 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+                    <button
+                      role="tab"
+                      aria-selected={activePanelTab === "orders"}
+                      onClick={() => setPanelTab("orders")}
+                      className={`rounded px-3 py-1.5 text-sm font-bold ${activePanelTab === "orders" ? "bg-white shadow-sm text-slate-900" : "text-slate-500"}`}
+                    >
+                      📋 Pedidos
+                    </button>
+                    <button
+                      role="tab"
+                      aria-selected={activePanelTab === "fruver"}
+                      onClick={() => setPanelTab("fruver")}
+                      className={`rounded px-3 py-1.5 text-sm font-bold ${activePanelTab === "fruver" ? "bg-white shadow-sm text-slate-900" : "text-slate-500"}`}
+                    >
+                      🥬 Fruver
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="primary" onClick={() => setFormOpen(true)}>＋ Nuevo tiquete</Button>
+                <Button variant="primary" onClick={() => { setReceipt(null); setFormOpen(true); }}>＋ Nuevo tiquete</Button>
                 <Button variant="secondary" onClick={() => setScannerOpen(true)}>📸 Escanear QR</Button>
                 <div className="hidden md:inline-flex">
                   <Button variant="primary" onClick={cashReport}>📊 Cierre de Caja</Button>
@@ -1468,6 +1527,15 @@ function PanelInner() {
           </div>
 
           <div className="mx-auto max-w-[1400px] px-4 py-6">
+            {activePanelTab === "fruver" ? (
+              <FruverPanel
+                businessId={config.business_id}
+                slug={slug}
+                businessName={config.business_name}
+                toastFn={toast}
+              />
+            ) : (
+            <>
             {/* Stats */}
             <section className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
               <div className="rounded-lg border border-slate-100 bg-white p-4 shadow-sm">
@@ -1586,6 +1654,8 @@ function PanelInner() {
                 </ul>
               </div>
             </div>
+            </>
+            )}
           </div>
 
           {/* Mobile bottom nav */}
@@ -1601,12 +1671,12 @@ function PanelInner() {
 
       {/* Form drawer */}
       {formOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-end bg-slate-900/40 lg:items-stretch" onClick={() => setFormOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-end justify-end bg-slate-900/40 lg:items-stretch" onClick={() => { setFormOpen(false); setReceipt(null); }}>
           <div className="h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl lg:h-auto lg:max-h-full lg:w-[420px] lg:rounded-none"
             onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <strong className="font-display text-lg font-extrabold text-slate-900">✅ Nuevo Tiquete Digital</strong>
-              <button onClick={() => setFormOpen(false)} className="rounded p-1 text-slate-500 hover:bg-slate-100">✕</button>
+              <button onClick={() => { setFormOpen(false); setReceipt(null); }} className="rounded p-1 text-slate-500 hover:bg-slate-100">✕</button>
             </div>
             <OrderForm config={config} slug={slug} toastFn={toast} onCreated={onOrderCreated} />
             {receipt && <Receipt order={receipt.order} waLink={receipt.waLink} liveUrl={receipt.liveUrl} message={receipt.message} />}
