@@ -52,6 +52,13 @@ interface FormErrors {
   general?: string;
 }
 
+interface ImportSummary {
+  created: number;
+  updated: number;
+  deactivated: number;
+  invalid: { rowNumber: number; reason: string }[];
+}
+
 function emptyForm(): ProductFormState {
   return {
     id: null,
@@ -107,6 +114,11 @@ export default function CatalogManager({ businessId, businessName, toastFn }: Fr
   const [saving, setSaving] = useState(false);
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [importUrl, setImportUrl] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
 
   const isEditing = form.id !== null;
 
@@ -256,10 +268,97 @@ export default function CatalogManager({ businessId, businessName, toastFn }: Fr
     [products]
   );
 
+  const handleImport = useCallback(async () => {
+    if (importing) return;
+    const url = importUrl.trim();
+    if (url === "") {
+      setImportError("La URL de la hoja publicada es obligatoria.");
+      return;
+    }
+    setImporting(true);
+    setImportError(null);
+    setImportSummary(null);
+    const { ok, data } = await apiPostJSON("/api/import-inventory", {
+      business_id: businessId,
+      url
+    });
+    setImporting(false);
+    if (!ok) {
+      const message =
+        (data && (data.message || data.error)) ||
+        "No se pudo importar el inventario.";
+      setImportError(typeof message === "string" ? message : "No se pudo importar el inventario.");
+      return;
+    }
+    setImportSummary(data);
+    toastFn("Inventario importado desde la hoja.");
+    await loadProducts();
+  }, [businessId, importUrl, importing, loadProducts, toastFn]);
+
   const currentPhoto = form.photo_base64 || form.photo_url;
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Importar inventario desde Google Sheets */}
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h3 className="text-base font-extrabold text-slate-900">
+          Importar inventario desde Google Sheets
+        </h3>
+        <p className="mt-1 text-xs leading-relaxed text-slate-500">
+          Publica tu hoja como CSV (Archivo → Compartir → Publicar en la web → CSV), pega la URL y
+          la hoja será la fuente de verdad del catálogo: crea productos nuevos, actualiza los que
+          coincidan (por <code className="rounded bg-slate-100 px-1">sku</code> o por nombre) y
+          desactiva los que ya no estén en la hoja.
+        </p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            type="url"
+            value={importUrl}
+            onChange={(e) => setImportUrl(e.target.value)}
+            placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?output=csv"
+            aria-label="URL de la hoja publicada como CSV"
+            aria-invalid={Boolean(importError)}
+            disabled={importing}
+            className="min-h-[40px] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:opacity-60"
+          />
+          <button
+            type="button"
+            onClick={() => void handleImport()}
+            disabled={importing}
+            className="min-h-[40px] rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            {importing ? "Importando…" : "Importar inventario"}
+          </button>
+        </div>
+        {importing && (
+          <p role="status" className="mt-2 text-xs font-bold text-slate-500">
+            Descargando y aplicando la hoja…
+          </p>
+        )}
+        {importError && (
+          <p role="alert" className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+            {importError}
+          </p>
+        )}
+        {importSummary && (
+          <div role="status" className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+            <p className="font-bold text-emerald-700">
+              Importación completada: {importSummary.created} creado(s) · {importSummary.updated}{" "}
+              actualizado(s) · {importSummary.deactivated} desactivado(s).
+            </p>
+            {importSummary.invalid.length > 0 && (
+              <ul className="mt-1 list-inside list-disc space-y-0.5 text-emerald-700/80">
+                {importSummary.invalid.map((row, index) => (
+                  <li key={`${row.rowNumber}-${index}`}>
+                    Fila {row.rowNumber}: {row.reason}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Formulario crear/editar */}
       <form
         onSubmit={handleSubmit}

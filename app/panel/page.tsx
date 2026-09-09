@@ -757,7 +757,7 @@ function OrderForm({ config, slug, onCreated, toastFn }: {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* El selector de servicios solo aplica a verticales con servicios
           configurados (p. ej. lavandería). En fruver el detalle es libre y los
           productos se manejan por cotización, así que se oculta si no hay. */}
@@ -1516,11 +1516,11 @@ function PanelInner() {
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="primary" onClick={() => { setReceipt(null); setFormOpen(true); }}>＋ Nuevo tiquete</Button>
-                <Button variant="secondary" onClick={() => setScannerOpen(true)}>📸 Escanear QR</Button>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button className="shadow-md shadow-brand-600/20" variant="primary" onClick={() => { setReceipt(null); setFormOpen(true); }}>＋ Nuevo tiquete</Button>
+                <Button className="border-slate-300" variant="secondary" onClick={() => setScannerOpen(true)}>📸 Escanear QR</Button>
                 <div className="hidden md:inline-flex">
-                  <Button variant="primary" onClick={cashReport}>📊 Cierre de Caja</Button>
+                  <Button className="bg-slate-800 text-white hover:bg-slate-700" variant="primary" onClick={cashReport}>📊 Cierre de Caja</Button>
                 </div>
               </div>
             </div>
@@ -1672,9 +1672,9 @@ function PanelInner() {
       {/* Form drawer */}
       {formOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-end bg-slate-900/40 lg:items-stretch" onClick={() => { setFormOpen(false); setReceipt(null); }}>
-          <div className="h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl lg:h-auto lg:max-h-full lg:w-[420px] lg:rounded-none"
+          <div className="h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl lg:h-auto lg:max-h-full lg:w-[460px] lg:p-6 lg:rounded-none"
             onClick={(e) => e.stopPropagation()}>
-            <div className="mb-3 flex items-center justify-between">
+            <div className="mb-5 flex items-center justify-between">
               <strong className="font-display text-lg font-extrabold text-slate-900">✅ Nuevo Tiquete Digital</strong>
               <button onClick={() => { setFormOpen(false); setReceipt(null); }} className="rounded p-1 text-slate-500 hover:bg-slate-100">✕</button>
             </div>

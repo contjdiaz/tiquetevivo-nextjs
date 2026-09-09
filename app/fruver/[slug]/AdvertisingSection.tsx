@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { PublicPromotionAny } from "@/lib/fruver/sanitize";
 import type { AdvertisingBlocks } from "@/lib/fruver/advertising";
 
@@ -18,10 +19,12 @@ function formatMoney(value: number): string {
  */
 export default function AdvertisingSection({
   advertising,
-  promotions
+  promotions,
+  brandColor
 }: {
   advertising?: AdvertisingBlocks;
   promotions: PublicPromotionAny[];
+  brandColor?: string;
 }) {
   const banners = advertising?.promotions ?? [];
   const seasonal = advertising?.seasonal ?? [];
@@ -40,17 +43,17 @@ export default function AdvertisingSection({
   if (!hasComposed) {
     if (promotions.length === 0) return null;
     return (
-      <section className="mt-5 space-y-3">
+      <section className="mt-5 space-y-3" style={{ "--fruver-primary": brandColor } as CSSProperties}>
         <h2 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">
           Promociones activas
         </h2>
         {promotions.map((promo, i) => (
           <div
             key={i}
-            className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 shadow-sm"
+            className="flex items-start gap-3 rounded-2xl border border-[var(--fruver-primary-border,#d1fae5)] bg-[var(--fruver-primary-soft,#ecfdf5)] px-4 py-3 shadow-sm"
           >
             <span className="mt-0.5 text-xl">📣</span>
-            <p className="text-sm font-semibold text-emerald-800">
+            <p className="text-sm font-semibold text-[var(--fruver-primary-strong,#065f46)]">
               {promo.type === "banner" && promo.text}
               {promo.type === "combo" && `Combo con ${promo.discount_percent}% de descuento`}
               {promo.type === "discount_code" && (
@@ -66,7 +69,7 @@ export default function AdvertisingSection({
   }
 
   return (
-    <section className="mt-5 space-y-3">
+    <section className="mt-5 space-y-3" style={{ "--fruver-primary": brandColor } as CSSProperties}>
       <h2 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">
         Promociones y novedades
       </h2>
@@ -75,11 +78,11 @@ export default function AdvertisingSection({
       {banners.map((b, i) => (
         <div
           key={`banner-${i}`}
-          className="flex items-start gap-3 rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-white px-4 py-3 shadow-sm"
+            className="flex items-start gap-3 rounded-2xl border border-[var(--fruver-primary-border,#d1fae5)] bg-[var(--fruver-primary-soft,#ecfdf5)] px-4 py-3 shadow-sm"
         >
           <span className="mt-0.5 text-2xl">📣</span>
           <div>
-            <p className="text-sm font-bold text-emerald-800">{b.text}</p>
+            <p className="text-sm font-bold text-[var(--fruver-primary-strong,#065f46)]">{b.text}</p>
           </div>
         </div>
       ))}

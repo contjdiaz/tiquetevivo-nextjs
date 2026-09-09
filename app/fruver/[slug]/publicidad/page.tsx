@@ -208,7 +208,7 @@ export default async function FruverAdvertisingPage({
             muestra bloques con contenido y omite la sección cuando no hay
             publicidad ni promociones vigentes (R8.1, R8.2, R8.3). La invitación
             a redes se renderiza dentro cuando existe (R9.1). ── */}
-        <AdvertisingSection advertising={advertising} promotions={promotions} />
+        <AdvertisingSection advertising={advertising} promotions={promotions} brandColor={brandColor} />
 
         {/* ── CTA_Cotizar de cierre hacia /fruver/[slug] con texto de acción
             explícito que describe su destino (R9.2, R9.3). Aplica brandColor de

@@ -22,6 +22,7 @@
 // set the section's `Component` to `lazy(() => import("./CatalogManager"))`.
 import { Suspense, lazy, useState, type ComponentType } from "react";
 import Link from "next/link";
+import { BarChart3, Compass, ReceiptText, ShoppingBasket, Tag, type LucideIcon } from "lucide-react";
 
 // ─── Concrete sub-panels (tasks 5.1, 6.1, 7.1, 7.2) ────────────────────────
 // Lazily loaded so each section's code only ships when its sub-tab is opened.
@@ -56,7 +57,7 @@ type SubPanelKey = "catalog" | "promotions" | "quotes" | "analytics";
 interface SubPanelDef {
   key: SubPanelKey;
   label: string;
-  icon: string;
+  icon: LucideIcon;
   /**
    * Lazily-loaded component for the section, or `null` while the concrete
    * sub-panel has not been implemented yet (later tasks fill these in).
@@ -67,10 +68,10 @@ interface SubPanelDef {
 // Mount points. Set `Component` to a `lazy(() => import("./X"))` once the
 // concrete sub-panel exists. Order defines the sub-tab order.
 const SUB_PANELS: SubPanelDef[] = [
-  { key: "catalog", label: "Catálogo", icon: "🥬", Component: CatalogManager },
-  { key: "promotions", label: "Promociones", icon: "🏷️", Component: PromotionsManager },
-  { key: "quotes", label: "Cotizaciones", icon: "🧾", Component: QuotesPanel },
-  { key: "analytics", label: "Analítica", icon: "📊", Component: FruverAnalytics }
+  { key: "catalog", label: "Catálogo", icon: ShoppingBasket, Component: CatalogManager },
+  { key: "promotions", label: "Promociones", icon: Tag, Component: PromotionsManager },
+  { key: "quotes", label: "Cotizaciones", icon: ReceiptText, Component: QuotesPanel },
+  { key: "analytics", label: "Analítica", icon: BarChart3, Component: FruverAnalytics }
 ];
 
 function PlaceholderPanel({ label }: { label: string }) {
@@ -110,9 +111,9 @@ export default function FruverPanel(props: FruverPanelProps) {
           rel="noopener noreferrer"
           className="inline-flex min-h-[40px] items-center gap-2 self-start rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
         >
-          <span aria-hidden="true">🧭</span>
+          <Compass size={16} aria-hidden="true" />
           Centro de gestión
-          <span aria-hidden="true" className="text-xs text-slate-400">↗</span>
+          <span className="sr-only">, abre en una nueva pestaña</span>
         </Link>
       </div>
 
@@ -122,28 +123,42 @@ export default function FruverPanel(props: FruverPanelProps) {
         aria-label="Secciones del panel fruver"
         className="mb-4 flex flex-wrap gap-2 border-b border-slate-100 pb-3"
       >
-        {SUB_PANELS.map((panel) => {
+        {SUB_PANELS.map((panel, index) => {
           const isActive = panel.key === active;
+          const tabId = `fruver-tab-${panel.key}`;
+          const panelId = `fruver-panel-${panel.key}`;
+          const Icon = panel.icon;
           return (
             <button
               key={panel.key}
+              id={tabId}
               role="tab"
               aria-selected={isActive}
+              aria-controls={panelId}
+              tabIndex={isActive ? 0 : -1}
               onClick={() => setActive(panel.key)}
+              onKeyDown={(event) => {
+                if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+                event.preventDefault();
+                const direction = event.key === "ArrowRight" ? 1 : -1;
+                const next = SUB_PANELS[(index + direction + SUB_PANELS.length) % SUB_PANELS.length];
+                setActive(next.key);
+                document.getElementById(`fruver-tab-${next.key}`)?.focus();
+              }}
               className={`rounded-lg px-3 py-2 text-sm font-bold transition ${
                 isActive
                   ? "bg-brand-600 text-white shadow-sm"
                   : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
-              <span aria-hidden="true">{panel.icon}</span> {panel.label}
+              <Icon size={16} aria-hidden="true" /> {panel.label}
             </button>
           );
         })}
       </div>
 
       {/* Active sub-panel */}
-      <div role="tabpanel">
+      <div id={`fruver-panel-${current.key}`} role="tabpanel" aria-labelledby={`fruver-tab-${current.key}`} tabIndex={0}>
         {ActiveComponent ? (
           <Suspense
             fallback={

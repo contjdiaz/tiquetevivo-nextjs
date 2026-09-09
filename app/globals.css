@@ -101,6 +101,19 @@ body {
   @apply bg-slate-50 text-slate-900 antialiased;
 }
 
+/* Form controls used by the shared order drawer across all verticals. */
+.input {
+  @apply mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none transition;
+}
+
+.input::placeholder {
+  @apply text-slate-400;
+}
+
+.input:focus {
+  @apply border-brand-500 ring-2 ring-brand-100;
+}
+
 @media (prefers-color-scheme: dark) {
   body:not([data-theme="light"]) {
     @apply bg-slate-950 text-slate-100;

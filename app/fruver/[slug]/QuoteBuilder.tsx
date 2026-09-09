@@ -8,6 +8,7 @@ import {
   normalizeHex,
   readableTextColor
 } from "@/lib/fruver/brand";
+import { getFruverTheme } from "@/components/fruver/FruverPageShell";
 import type { PublicProduct, QuoteLine } from "@/lib/fruver/types";
 import type { PublicPromotionAny } from "@/lib/fruver/sanitize";
 import type { AdvertisingBlocks } from "@/lib/fruver/advertising";
@@ -30,6 +31,32 @@ interface QuoteBuilderProps {
 
 function formatMoney(value: number): string {
   return `$${Math.round(value).toLocaleString("es-CO")}`;
+}
+
+/** Normaliza dígitos de teléfono igual que el servidor (`validatePhone`). */
+function normalizeDigits(value: string): string {
+  return value.replace(/[+\s\-]/g, "");
+}
+
+/** Valida el teléfono opcional: 10–15 dígitos cuando se ingresa. */
+function phoneValidationError(phone: string): string | null {
+  if (phone.trim() === "") return null;
+  const digits = normalizeDigits(phone);
+  if (!/^\d+$/.test(digits)) {
+    return "Usa solo dígitos (se permiten +, espacios o guiones).";
+  }
+  if (digits.length < 10 || digits.length > 15) {
+    return "El WhatsApp debe tener entre 10 y 15 dígitos.";
+  }
+  return null;
+}
+
+/** Valida el nombre opcional: al menos 2 caracteres cuando se ingresa. */
+function nameValidationError(name: string): string | null {
+  const trimmed = name.trim();
+  if (trimmed === "") return null;
+  if (trimmed.length < 2) return "El nombre debe tener al menos 2 caracteres.";
+  return null;
 }
 
 // ─── Quantity Stepper ───────────────────────────────────────────────────────
@@ -119,7 +146,7 @@ function ProductCard({
         product.is_seasonal
           ? "border-orange-200 ring-1 ring-orange-100"
           : subtotal !== null
-          ? "border-emerald-200 shadow-emerald-50"
+          ? "border-[var(--fruver-primary-border)] shadow-[var(--fruver-primary-soft)]"
           : "border-slate-100"
       }`}
     >
@@ -151,11 +178,11 @@ function ProductCard({
             </span>
           )}
         </div>
-        <p className="mt-0.5 text-sm font-semibold text-emerald-600">
+        <p className="mt-0.5 text-sm font-semibold text-[var(--fruver-primary)]">
           {formatMoney(product.day_price)} <span className="text-slate-400 font-normal">/ {product.unit}</span>
         </p>
         {subtotal !== null && (
-          <p className="mt-0.5 text-xs font-extrabold text-emerald-700">
+          <p className="mt-0.5 text-xs font-extrabold text-[var(--fruver-primary-strong,var(--fruver-primary))]">
             Subtotal: {formatMoney(subtotal)}
           </p>
         )}
@@ -208,6 +235,12 @@ export default function QuoteBuilder({
   const brandColor = normalizeHex(business.color) ?? DEFAULT_BRAND_COLOR;
   const brandTextColor = readableTextColor(brandColor);
 
+  // Validación en vivo de los datos del cliente (opcionales pero consistentes
+  // con las reglas del servidor `validatePhone`).
+  const phoneError = phoneValidationError(phone);
+  const nameError = nameValidationError(name);
+  const hasContactErrors = Boolean(phoneError || nameError);
+
   // Build valid quote lines from current quantities (qty numeric and > 0).
   const lines: QuoteLine[] = useMemo(() => {
     const out: QuoteLine[] = [];
@@ -241,7 +274,7 @@ export default function QuoteBuilder({
   }
 
   async function submitQuote() {
-    if (lines.length === 0) return;
+    if (lines.length === 0 || hasContactErrors) return;
     setSubmitting(true);
     setResult(null);
     try {
@@ -274,7 +307,10 @@ export default function QuoteBuilder({
   const selectedCount = lines.length;
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-36">
+    <main
+      className="min-h-screen bg-slate-50 pb-[calc(10rem+env(safe-area-inset-bottom))] [--fruver-primary-soft:color-mix(in_srgb,var(--fruver-primary)_10%,white)] [--fruver-primary-border:color-mix(in_srgb,var(--fruver-primary)_30%,white)]"
+      style={getFruverTheme(business.color)}
+    >
 
       {/* ── Hero Header ───────────────────────────────────────── */}
       <header
@@ -317,7 +353,7 @@ export default function QuoteBuilder({
       <div className="mx-auto max-w-2xl px-4">
 
         {/* ── Advertising blocks (R4) ──────────────────────────── */}
-        <AdvertisingSection advertising={advertising} promotions={promotions} />
+        <AdvertisingSection advertising={advertising} promotions={promotions} brandColor={brandColor} />
 
         {/* ── Estimated total notice (R5.5) ────────────────────── */}
         <div className="mt-5 flex items-start gap-2 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 shadow-sm">
@@ -337,7 +373,7 @@ export default function QuoteBuilder({
           {/* Search bar — filters the catalog by name (R2.1). Hidden when the
               catalog itself is empty since there is nothing to search. */}
           {products.length > 0 && (
-            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-200">
+            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm focus-within:border-[var(--fruver-primary)] focus-within:ring-2 focus-within:ring-[var(--fruver-primary-soft)]">
               <span className="text-lg" aria-hidden="true">🔍</span>
               <input
                 type="search"
@@ -352,7 +388,7 @@ export default function QuoteBuilder({
                   type="button"
                   onClick={() => setSearch("")}
                   aria-label="Limpiar búsqueda"
-                  className="grid h-10 w-10 place-items-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                  className="grid h-10 w-10 place-items-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--fruver-focus)]"
                 >
                   ✕
                 </button>
@@ -403,28 +439,52 @@ export default function QuoteBuilder({
           <h2 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">
             Tus datos (opcionales)
           </h2>
-          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-200">
-            <span className="text-lg" aria-hidden="true">👤</span>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Tu nombre"
-              aria-label="Tu nombre"
-              className="h-6 flex-1 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
-            />
-          </label>
-          <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-200">
-            <span className="text-lg" aria-hidden="true">📱</span>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Tu WhatsApp"
-              aria-label="Tu número de WhatsApp"
-              className="h-6 flex-1 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
-            />
-          </label>
+          <div className="space-y-3">
+            <label className={`flex items-center gap-3 rounded-2xl border bg-white px-4 py-3 shadow-sm focus-within:ring-2 ${
+              nameError
+                ? "border-red-300 focus-within:border-red-400 focus-within:ring-red-200"
+                : "border-slate-200 focus-within:border-[var(--fruver-primary)] focus-within:ring-[var(--fruver-primary-soft)]"
+            }`}>
+              <span className="text-lg" aria-hidden="true">👤</span>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Tu nombre"
+                aria-label="Tu nombre"
+                aria-invalid={Boolean(nameError)}
+                aria-describedby={nameError ? "name-error" : undefined}
+                className="h-6 flex-1 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+              />
+            </label>
+            {nameError && (
+              <p id="name-error" role="alert" className="mt-0.5 px-2 text-xs font-semibold text-red-500">
+                {nameError}
+              </p>
+            )}
+            <label className={`flex items-center gap-3 rounded-2xl border bg-white px-4 py-3 shadow-sm focus-within:ring-2 ${
+              phoneError
+                ? "border-red-300 focus-within:border-red-400 focus-within:ring-red-200"
+                : "border-slate-200 focus-within:border-[var(--fruver-primary)] focus-within:ring-[var(--fruver-primary-soft)]"
+            }`}>
+              <span className="text-lg" aria-hidden="true">📱</span>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Tu WhatsApp"
+                aria-label="Tu número de WhatsApp"
+                aria-invalid={Boolean(phoneError)}
+                aria-describedby={phoneError ? "phone-error" : undefined}
+                className="h-6 flex-1 bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+              />
+            </label>
+            {phoneError && (
+              <p id="phone-error" role="alert" className="mt-0.5 px-2 text-xs font-semibold text-red-500">
+                {phoneError}
+              </p>
+            )}
+          </div>
         </section>
 
         {/* ── Result messages ──────────────────────────────────── */}
@@ -451,7 +511,7 @@ export default function QuoteBuilder({
           and the clear CTA are always reachable without obstructing content
           (the main region reserves bottom padding). */}
       <div
-        className="fixed inset-x-0 bottom-0 border-t border-slate-100 bg-white/95 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] backdrop-blur"
+        className="fixed inset-x-0 bottom-0 border-t border-slate-100 bg-white/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] backdrop-blur"
         role="region"
         aria-label="Resumen de tu cotización"
       >
@@ -460,7 +520,7 @@ export default function QuoteBuilder({
           <p className="mb-1.5 text-center text-[11px] leading-tight text-slate-400">
             Total <strong className="font-semibold text-slate-500">estimado</strong> · lo confirma el negocio
           </p>
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col items-stretch gap-3 min-[430px]:flex-row min-[430px]:items-center min-[430px]:justify-between">
             <div aria-live="polite">
               <span className="block text-[11px] font-bold uppercase tracking-wide text-slate-400">
                 Total estimado
@@ -477,13 +537,15 @@ export default function QuoteBuilder({
             <button
               type="button"
               onClick={submitQuote}
-              disabled={submitting || lines.length === 0}
+              disabled={submitting || lines.length === 0 || hasContactErrors}
               aria-label={
                 lines.length === 0
                   ? "Enviar cotización (agrega al menos un producto)"
+                  : hasContactErrors
+                  ? "Enviar cotización (revisa tus datos)"
                   : "Enviar cotización"
               }
-              className="flex min-h-[48px] items-center gap-2 rounded-2xl px-6 py-3 text-sm font-extrabold shadow-lg transition hover:opacity-90 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl px-6 py-3 text-sm font-extrabold shadow-lg transition hover:opacity-90 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-40 min-[430px]:w-auto"
               style={{ backgroundColor: brandColor, color: brandTextColor }}
             >
               {submitting ? (

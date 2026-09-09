@@ -18,7 +18,7 @@ export default function Button({
   const radius = rounded === "full" ? "rounded-full" : rounded === "xl" ? "rounded-xl" : "rounded-lg";
   return (
     <button
-      className={`inline-flex items-center justify-center text-sm font-extrabold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${radius} ${variants[variant]} ${className}`}
+      className={`inline-flex min-h-10 items-center justify-center gap-2 whitespace-nowrap px-3 py-2 text-sm font-extrabold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${radius} ${variants[variant]} ${className}`}
       {...props}
     />
   );
