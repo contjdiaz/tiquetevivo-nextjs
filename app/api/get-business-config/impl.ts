@@ -12,15 +12,17 @@ export async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
 
     let verticalEmoji = "";
     let verticalName = "";
+    let verticalSlug = "";
     if (business.vertical_id) {
       const { data: vertical } = await supabase
         .from("verticals")
-        .select("emoji, name")
+        .select("emoji, name, slug")
         .eq("id", business.vertical_id)
         .single();
       if (vertical) {
         verticalEmoji = vertical.emoji || "";
         verticalName = vertical.name || "";
+        verticalSlug = vertical.slug || "";
       }
     }
 
@@ -46,6 +48,7 @@ export async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
         plan: business.plan || "free",
         vertical_emoji: verticalEmoji,
         vertical_name: verticalName,
+        vertical_slug: verticalSlug,
         services_config: business.services_config || [],
         custom_fields_config: business.custom_fields_config || [],
         status_flow_config: business.status_flow_config || [],
@@ -63,6 +66,7 @@ export async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
       business_color: business.color || null,
       vertical_emoji: verticalEmoji,
       vertical_name: verticalName,
+      vertical_slug: verticalSlug,
       status_flow_config: business.status_flow_config || [],
       custom_fields_config: business.custom_fields_config || [],
       loyalty_config: {
