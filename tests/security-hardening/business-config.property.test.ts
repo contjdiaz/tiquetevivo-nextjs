@@ -25,6 +25,7 @@ const PUBLIC_SAFE_FIELDS = [
   'business_slug',
   'vertical_emoji',
   'vertical_name',
+  'vertical_slug',
   'status_flow_config',
   'custom_fields_config',
   'loyalty_config',
