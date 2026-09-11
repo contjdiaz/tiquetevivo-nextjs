@@ -7,15 +7,14 @@ function formatMoney(value: number): string {
 }
 
 /**
- * Shared advertising renderer for the fruver vertical. Renders only the blocks
- * that have content so the page never shows an empty advertising section
- * (R3.2). Falls back to the raw vigent `promotions` list when composed
- * advertising blocks are not provided.
+ * Shared advertising renderer for every catalog vertical (fruver, lavanderia).
+ * Renders only the blocks that have content so the page never shows an empty
+ * advertising section. Falls back to the raw vigent `promotions` list when
+ * composed advertising blocks are not provided.
  *
- * Extracted from `QuoteBuilder.tsx` so both the public catalog and the
- * advertising page (`/fruver/[slug]/publicidad`) can consume it without
- * duplication. It is a presentational component with no client-side state,
- * so it is safe to render inside a Server Component.
+ * Consumes the shared `--brand-*` / `--fruver-*` theme tokens, so it can be
+ * mounted on any vertical page. It is a presentational component with no
+ * client-side state, so it is safe to render inside a Server Component.
  */
 export default function AdvertisingSection({
   advertising,
@@ -78,12 +77,10 @@ export default function AdvertisingSection({
       {banners.map((b, i) => (
         <div
           key={`banner-${i}`}
-            className="flex items-start gap-3 rounded-2xl border border-[var(--fruver-primary-border,#d1fae5)] bg-[var(--fruver-primary-soft,#ecfdf5)] px-4 py-3 shadow-sm"
+          className="flex items-start gap-3 rounded-2xl border border-[var(--fruver-primary-border,#d1fae5)] bg-[var(--fruver-primary-soft,#ecfdf5)] px-4 py-3 shadow-sm"
         >
           <span className="mt-0.5 text-2xl">📣</span>
-          <div>
-            <p className="text-sm font-bold text-[var(--fruver-primary-strong,#065f46)]">{b.text}</p>
-          </div>
+          <p className="text-sm font-bold text-[var(--fruver-primary-strong,#065f46)]">{b.text}</p>
         </div>
       ))}
 

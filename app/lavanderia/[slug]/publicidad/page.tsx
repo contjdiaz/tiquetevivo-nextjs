@@ -1,20 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { handler as publicCatalogHandler } from "@/app/api/public-catalog/impl";
-import {
-  DEFAULT_BRAND_COLOR,
-  normalizeHex,
-  readableTextColor
-} from "@/lib/fruver/brand";
-import type { PublicProduct } from "@/lib/fruver/types";
+import { normalizeHex, readableTextColor } from "@/lib/vertical/brand";
+import { DEFAULT_BRAND_COLOR } from "@/lib/lavanderia/brand";
+import type { PublicService } from "@/lib/lavanderia/types";
 import type { PublicPromotionAny } from "@/lib/fruver/sanitize";
 import type { AdvertisingBlocks } from "@/lib/fruver/advertising";
 import AdvertisingSection from "@/components/vertical/AdvertisingSection";
 import ComoFuncionaSection from "./ComoFuncionaSection";
 import FuncionalidadesSection from "./FuncionalidadesSection";
 
-// Render dynamically (SSR) without caching the Catálogo_Handler response, since
-// the advertising reflects live promotions and the daily catalog (R1.2).
 export const dynamic = "force-dynamic";
 
 interface PublicBusiness {
@@ -26,7 +21,7 @@ interface PublicBusiness {
 
 interface CatalogData {
   business: PublicBusiness;
-  products: PublicProduct[];
+  services: PublicService[];
   promotions: PublicPromotionAny[];
   advertising: AdvertisingBlocks;
 }
@@ -61,11 +56,8 @@ async function loadCatalog(slug: string): Promise<CatalogData | null> {
 
 /**
  * Shareable metadata (title/description + Open Graph) built from the public
- * business data (Datos_Públicos), with an owner-focused framing that positions
- * the platform as a management tool for the business owner (R11.1, R11.2).
- *
- * When no public data is available, backup metadata is produced indicating that
- * the business is not available (R11.3).
+ * business data, with an owner-focused framing that positions the platform as
+ * a management tool for the business owner (R11.1, R11.2).
  */
 export async function generateMetadata({
   params
@@ -83,10 +75,8 @@ export async function generateMetadata({
     };
   }
 
-  // Owner-focused title/description derived from the public business data
-  // (R11.1): the platform is presented as a management tool for the owner.
-  const title = `${data.business.name} · Gestiona tu negocio con catálogo y cotizaciones en línea`;
-  const description = `Descubre cómo ${data.business.name} publica su catálogo, gestiona promociones y cotizaciones, y convierte cada cotización en un pedido con tiquete. La plataforma de gestión para el dueño del negocio.`;
+  const title = `${data.business.name} · Gestiona tu lavandería con servicios y cotizaciones en línea`;
+  const description = `Descubre cómo ${data.business.name} publica sus servicios, gestiona promociones y cotizaciones, y convierte cada cotización en un pedido con tiquete. La plataforma de gestión para el dueño de la lavandería.`;
 
   return {
     title,
@@ -95,13 +85,12 @@ export async function generateMetadata({
       title,
       description,
       type: "website",
-      // Include the business logo in Open Graph images when available (R11.2).
       ...(data.business.logo_url ? { images: [{ url: data.business.logo_url }] } : {})
     }
   };
 }
 
-export default async function FruverAdvertisingPage({
+export default async function LavanderiaAdvertisingPage({
   params
 }: {
   params: Promise<{ slug: string }>;
@@ -155,40 +144,36 @@ export default async function FruverAdvertisingPage({
             />
           ) : (
             <div className="grid h-20 w-20 shrink-0 place-items-center rounded-3xl border-2 border-white/30 bg-white/20 text-4xl shadow-lg">
-              🛒
+              🧺
             </div>
           )}
           <div>
             <h1 className="text-2xl font-extrabold leading-tight">{business.name}</h1>
-            {/* Owner-focused pitch: positions the platform as a management tool
-                for the business owner (R3.1, R3.2). */}
             <p className="mx-auto mt-2 max-w-md text-sm font-medium opacity-90">
-              Tu plataforma de gestión para {business.name}: publica tu catálogo,
+              Tu plataforma de gestión para {business.name}: publica tus servicios,
               administra promociones y cotizaciones, y convierte cada cotización en
               un pedido con tiquete. Todo desde un solo lugar.
             </p>
           </div>
 
-          {/* Primary CTA toward the catalog (R3.3), with explicit action text
+          {/* Primary CTA toward the quoter (R3.3), with explicit action text
               and a ≥ 48px touch target (R9.3, R10.4). */}
           <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
             <Link
-              href={`/fruver/${business.slug}`}
+              href={`/lavanderia/${business.slug}`}
               className="inline-flex min-h-[48px] items-center gap-2 rounded-2xl bg-white px-7 py-3 text-sm font-extrabold shadow-lg transition hover:opacity-90 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
               style={{ color: brandColor }}
             >
-              <span aria-hidden="true">🛒</span>
-              Ver catálogo y cotizar
+              <span aria-hidden="true">🧺</span>
+              Cotizar servicios
             </Link>
-            {/* Acceso al Centro de gestión para que el dueño encuentre todas las
-                funcionalidades desde un solo lugar. */}
             <Link
-              href={`/fruver/${business.slug}/inicio`}
+              href={`/lavanderia/${business.slug}/inicio`}
               className="inline-flex min-h-[48px] items-center gap-2 rounded-2xl border border-white/60 px-6 py-3 text-sm font-extrabold shadow-sm transition hover:bg-white/10 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
               style={{ color: brandTextColor }}
             >
               <span aria-hidden="true">🧭</span>
-              Centro de gestión
+              Centro de Lavandería
             </Link>
           </div>
         </div>
@@ -210,23 +195,23 @@ export default async function FruverAdvertisingPage({
             a redes se renderiza dentro cuando existe (R9.1). ── */}
         <AdvertisingSection advertising={advertising} promotions={promotions} brandColor={brandColor} />
 
-        {/* ── CTA_Cotizar de cierre hacia /fruver/[slug] con texto de acción
-            explícito que describe su destino (R9.2, R9.3). Aplica brandColor de
-            fondo y brandTextColor al texto, con foco visible y altura táctil
-            ≥ 48 px (R2.2, R2.3, R10.1, R10.4). ── */}
+        {/* ── CTA_Cotizar de cierre hacia /lavanderia/[slug] con texto de
+            acción explícito que describe su destino (R9.2, R9.3). Aplica
+            brandColor de fondo y brandTextColor al texto, con foco visible y
+            altura táctil ≥ 48 px (R2.2, R2.3, R10.1, R10.4). ── */}
         <section className="mt-8 rounded-3xl border border-slate-100 bg-white px-6 py-8 text-center shadow-sm">
           <h2 className="text-lg font-extrabold text-slate-800">¿Listo para tu pedido?</h2>
           <p className="mt-1.5 text-sm text-slate-500">
-            Explora el catálogo del día y arma tu cotización. El total lo confirma el
-            negocio según disponibilidad y peso real.
+            Explora los servicios y arma tu cotización. El total lo confirma el
+            negocio según el peso real y las prendas recibidas.
           </p>
           <Link
-            href={`/fruver/${business.slug}`}
+            href={`/lavanderia/${business.slug}`}
             className="mt-4 inline-flex min-h-[48px] items-center gap-2 rounded-2xl px-7 py-3 text-sm font-extrabold shadow-lg transition hover:opacity-90 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-slate-400"
             style={{ backgroundColor: brandColor, color: brandTextColor }}
           >
             <span aria-hidden="true">📲</span>
-            Ir al catálogo y cotizar
+            Cotizar servicios
           </Link>
         </section>
       </div>
