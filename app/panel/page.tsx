@@ -8,7 +8,9 @@ import Button from "@/components/ui/Button";
 import StatusTag from "@/components/ui/StatusTag";
 import { useBrandTheme } from "@/lib/brand-theme";
 import { isFruverVertical } from "@/lib/fruver/vertical";
+import { isLavanderiaVertical } from "@/lib/lavanderia/vertical";
 import FruverPanel from "./fruver/FruverPanel";
+import LavanderiaPanel from "./lavanderia/LavanderiaPanel";
 import {
   apiFetch,
   apiGetJSON,
@@ -1190,7 +1192,7 @@ function PanelInner() {
   const [statusFilter, setStatusFilter] = useState("");
   const [view, setView] = useState<"table" | "kanban">("table");
   // Top-level panel tab. The "Fruver" tab only appears for fruver businesses.
-  const [panelTab, setPanelTab] = useState<"orders" | "fruver">("orders");
+  const [panelTab, setPanelTab] = useState<"orders" | "fruver" | "lavanderia">("orders");
   const [currentPage, setCurrentPage] = useState(1);
   // Default to 25 on the server (no localStorage during SSR); the stored
   // preference is hydrated on the client in the effect below.
@@ -1423,14 +1425,20 @@ function PanelInner() {
 
   function resetPage() { setCurrentPage(1); }
 
-  // Detect the fruver vertical from the loaded config to gate the Fruver tab
-  // (R4.1, R5.4, R6.1). If the active business is not fruver, force the tab
-  // back to orders so a stale selection never hides the orders view.
+  // Detect the vertical of the active business from the loaded config to gate
+  // the vertical sub-panels (Fruver / Lavandería). If the active business has
+  // no vertical tab, force the tab back to orders so a stale selection never
+  // hides the orders view.
   const isFruver = isFruverVertical({
     verticalName: config.vertical_name,
     businessSlug: config.business_slug || slug
   });
-  const activePanelTab = isFruver ? panelTab : "orders";
+  const isLavanderia = isLavanderiaVertical({
+    verticalName: config.vertical_name,
+    businessSlug: config.business_slug || slug
+  });
+  const verticalPanelKey = isFruver ? "fruver" : isLavanderia ? "lavanderia" : null;
+  const activePanelTab = verticalPanelKey === panelTab ? panelTab : verticalPanelKey ?? "orders";
 
   function changeSlug(newSlug: string) {
     if (!newSlug) return;
@@ -1490,12 +1498,16 @@ function PanelInner() {
             <div className="mx-auto flex max-w-[1400px] flex-col gap-3 px-4 py-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <h1 className="font-display text-2xl font-extrabold text-slate-900">
-                  {activePanelTab === "fruver" ? "Panel Fruver" : "Pedidos del día"}
+                  {activePanelTab === "fruver"
+                    ? "Panel Fruver"
+                    : activePanelTab === "lavanderia"
+                    ? "Panel Lavandería"
+                    : "Pedidos del día"}
                 </h1>
                 <div className="text-sm text-slate-500">
                   <span className="font-extrabold">{config.vertical_emoji}{config.vertical_emoji ? " " : ""}{config.business_name}</span>
                 </div>
-                {isFruver && (
+                {(isFruver || isLavanderia) && (
                   <div role="tablist" aria-label="Secciones del panel" className="mt-3 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
                     <button
                       role="tab"
@@ -1505,14 +1517,26 @@ function PanelInner() {
                     >
                       📋 Pedidos
                     </button>
-                    <button
-                      role="tab"
-                      aria-selected={activePanelTab === "fruver"}
-                      onClick={() => setPanelTab("fruver")}
-                      className={`rounded px-3 py-1.5 text-sm font-bold ${activePanelTab === "fruver" ? "bg-white shadow-sm text-slate-900" : "text-slate-500"}`}
-                    >
-                      🥬 Fruver
-                    </button>
+                    {isFruver && (
+                      <button
+                        role="tab"
+                        aria-selected={activePanelTab === "fruver"}
+                        onClick={() => setPanelTab("fruver")}
+                        className={`rounded px-3 py-1.5 text-sm font-bold ${activePanelTab === "fruver" ? "bg-white shadow-sm text-slate-900" : "text-slate-500"}`}
+                      >
+                        🥬 Fruver
+                      </button>
+                    )}
+                    {isLavanderia && (
+                      <button
+                        role="tab"
+                        aria-selected={activePanelTab === "lavanderia"}
+                        onClick={() => setPanelTab("lavanderia")}
+                        className={`rounded px-3 py-1.5 text-sm font-bold ${activePanelTab === "lavanderia" ? "bg-white shadow-sm text-slate-900" : "text-slate-500"}`}
+                      >
+                        🧺 Lavandería
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -1529,6 +1553,13 @@ function PanelInner() {
           <div className="mx-auto max-w-[1400px] px-4 py-6">
             {activePanelTab === "fruver" ? (
               <FruverPanel
+                businessId={config.business_id}
+                slug={slug}
+                businessName={config.business_name}
+                toastFn={toast}
+              />
+            ) : activePanelTab === "lavanderia" ? (
+              <LavanderiaPanel
                 businessId={config.business_id}
                 slug={slug}
                 businessName={config.business_name}
