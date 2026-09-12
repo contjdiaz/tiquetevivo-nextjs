@@ -1,17 +1,50 @@
 import { createClient } from "@supabase/supabase-js";
 import type { NetlifyEvent, NetlifyResponse } from "./netlify-adapter";
+import { corsHeaders, type CorsType } from "./_cors";
 
+/**
+ * Respuesta JSON con CORS publico (`Access-Control-Allow-Origin: *`).
+ * Es el comportamiento historico; se mantiene por retrocompatibilidad para los
+ * endpoints publicos existentes.
+ */
 export function json(statusCode: number, body: unknown): NetlifyResponse {
   return {
     statusCode,
     headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      ...corsHeaders("public"),
       "Content-Type": "application/json"
     },
     body: JSON.stringify(body)
   };
+}
+
+/**
+ * Respuesta JSON con CORS diferenciado por tipo de endpoint (Req 14).
+ * Usar `type: "private"` en endpoints administrativos/autenticados para evitar
+ * `Access-Control-Allow-Origin: *`. El `origin` proviene del header `Origin`.
+ */
+export function jsonWithCors(
+  statusCode: number,
+  body: unknown,
+  type: CorsType,
+  origin?: string | null
+): NetlifyResponse {
+  return {
+    statusCode,
+    headers: {
+      ...corsHeaders(type, origin),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  };
+}
+
+/** Extrae el header `Origin` de una peticion, normalizado. */
+export function getOrigin(event: NetlifyEvent): string | null {
+  const headers = event.headers || {};
+  const value = headers["origin"] || headers["Origin"];
+  if (!value) return null;
+  return Array.isArray(value) ? value[0] : value;
 }
 
 export function parseBody(event: NetlifyEvent): Record<string, any> {

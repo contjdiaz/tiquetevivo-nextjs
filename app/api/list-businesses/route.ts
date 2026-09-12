@@ -31,7 +31,7 @@ async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
       vertical_name: biz.verticals?.name || ""
     }));
 
-    return json(200, businesses);
+    return json(200, { businesses });
   } catch (error: any) {
     return json(500, { error: error.message });
   }

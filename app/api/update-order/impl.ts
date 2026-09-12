@@ -1,6 +1,6 @@
 import { getBusinessBySlug, getClientIp, json, parseBody, requireAuth, supabaseAdmin } from "@/lib/api/_utils";
 import { mirrorOrderToSheets } from "@/lib/api/_sheets";
-import { validateStatus, validateAmount, validateStatusTransition, validateStatusInFlow } from "@/lib/api/_validators";
+import { validateStatus, validateAmount, validateStatusTransition, validateStatusInFlow, validateCustomFields } from "@/lib/api/_validators";
 import { sendWhatsAppMessage, buildFallbackLink, logWhatsAppMessage } from "@/lib/api/_whatsapp";
 import { getBusinessConfig } from "@/lib/api/_vertical-config";
 import { selectTemplate, renderTemplate } from "@/lib/api/_template-engine";
@@ -195,7 +195,21 @@ export async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
 
     if (body.custom_fields && typeof body.custom_fields === "object") {
       const existingCustom = existingOrder.custom_fields || {};
-      updatePayload.custom_fields = { ...existingCustom, ...body.custom_fields };
+      const mergedCustom = { ...existingCustom, ...body.custom_fields };
+
+      const customFieldsDefs = businessConfig.custom_fields_config || [];
+      if (customFieldsDefs.length > 0) {
+        const cfResult = validateCustomFields(mergedCustom, customFieldsDefs);
+        if (!cfResult.valid) {
+          return json(400, {
+            error: true,
+            message: cfResult.errors?.join("; ") || "Invalid custom fields",
+            field: "custom_fields"
+          });
+        }
+      }
+
+      updatePayload.custom_fields = mergedCustom;
     }
 
     let deliveryPhotoPath: string | null = null;

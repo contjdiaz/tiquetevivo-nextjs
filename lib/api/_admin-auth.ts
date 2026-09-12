@@ -1,6 +1,14 @@
 import { createHash } from "crypto";
-import { json, supabaseAdmin } from "./_utils";
+import { json, jsonWithCors, getOrigin, supabaseAdmin } from "./_utils";
 import type { NetlifyEvent, NetlifyResponse } from "./netlify-adapter";
+
+/**
+ * Respuesta JSON para endpoints admin/privados con CORS restringido (Req 14).
+ * Refleja el origen solo si esta en la allowlist (`ALLOWED_ORIGINS`).
+ */
+export function adminJson(event: NetlifyEvent, statusCode: number, body: unknown): NetlifyResponse {
+  return jsonWithCors(statusCode, body, "private", getOrigin(event));
+}
 
 /**
  * Validates the admin session token from the Authorization header.

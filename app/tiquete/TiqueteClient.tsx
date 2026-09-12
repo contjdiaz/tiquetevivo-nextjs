@@ -368,9 +368,11 @@ export default function TiqueteClient({ initial }: { initial: InitialTicket | nu
     if (fb) setPaymentFeedback(fb);
 
     // The server already provided the first paint for slug+number tickets.
-    // Only fetch immediately when we have no server data (ticket_token path)
-    // or when we should refresh on mount.
-    if (!initial || ticketToken) {
+    // Only fetch immediately when we have no server data (ticket_token path),
+    // when we should refresh on mount, or when returning from the payment
+    // gateway (payment=complete) so the balance/order reflect the new state
+    // right away instead of waiting for the polling interval (Req 3.4).
+    if (!initial || ticketToken || fb) {
       fetchOrder();
     }
 

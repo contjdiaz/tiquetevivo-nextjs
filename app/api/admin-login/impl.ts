@@ -2,6 +2,13 @@ import { json, parseBody } from "@/lib/api/_utils";
 import { createHash, randomBytes } from "crypto";
 import type { NetlifyEvent, NetlifyResponse } from "@/lib/api/netlify-adapter";
 
+/**
+ * @deprecated Flujo de login admin HEREDADO basado en `ADMIN_PASSWORD`.
+ * El flujo activo del panel es `POST /api/auth-login` (Supabase Auth) con rol
+ * `superadmin` validado en los endpoints `admin-*` via `validateAdminToken`.
+ * Se conserva solo por compatibilidad con el token admin firmado. Migrar a
+ * `auth-login` y retirar. Ver `docs/api-contracts-and-cors.md` (seccion 3).
+ */
 export async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
   if (event.httpMethod === "OPTIONS") return json(200, {});
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });

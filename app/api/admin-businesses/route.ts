@@ -1,10 +1,10 @@
-import { json, supabaseAdmin } from "@/lib/api/_utils";
-import { validateAdminToken } from "@/lib/api/_admin-auth";
+import { supabaseAdmin } from "@/lib/api/_utils";
+import { validateAdminToken, adminJson } from "@/lib/api/_admin-auth";
 import { netlifyHandler, type NetlifyEvent, type NetlifyResponse } from "@/lib/api/netlify-adapter";
 
 async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
-  if (event.httpMethod === "OPTIONS") return json(200, {});
-  if (event.httpMethod !== "GET") return json(405, { error: "Method not allowed" });
+  if (event.httpMethod === "OPTIONS") return adminJson(event, 200, {});
+  if (event.httpMethod !== "GET") return adminJson(event, 405, { error: "Method not allowed" });
 
   const auth = await validateAdminToken(event);
   if (!auth.valid) return auth.error;
@@ -35,9 +35,9 @@ async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
       vertical_slug: b.verticals?.slug || ""
     }));
 
-    return json(200, businesses);
+    return adminJson(event, 200, businesses);
   } catch (error: any) {
-    return json(500, { error: error.message });
+    return adminJson(event, 500, { error: error.message });
   }
 }
 

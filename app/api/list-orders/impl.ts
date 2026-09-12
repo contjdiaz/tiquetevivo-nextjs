@@ -139,12 +139,15 @@ export async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
       return authResult.error;
     }
 
+    const rawLimit = Number(event.queryStringParameters?.limit || 100);
+    const limit = Math.min(200, Math.max(1, Number.isFinite(rawLimit) ? rawLimit : 100));
+
     let query = supabase
       .from("orders")
       .select("*, order_items(*)")
       .eq("business_id", business.id)
       .order("created_at", { ascending: false })
-      .limit(Number(event.queryStringParameters?.limit || 100));
+      .limit(limit);
 
     if (status) query = query.eq("status", status);
 

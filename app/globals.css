@@ -114,6 +114,27 @@ body {
   @apply border-brand-500 ring-2 ring-brand-100;
 }
 
+/* Indicador de foco visible consistente para navegación por teclado (Req 11.3).
+   Solo se muestra en foco por teclado (:focus-visible), no en clics de ratón.
+   Usa el token de marca (--color-brand-500) para mantener coherencia con el tema. */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: var(--radius-lg);
+}
+
+/* Evita el doble anillo cuando el foco coincide con hover/active en algunos navegadores. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 @media (prefers-color-scheme: dark) {
   body:not([data-theme="light"]) {
     @apply bg-slate-950 text-slate-100;

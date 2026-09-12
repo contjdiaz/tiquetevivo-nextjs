@@ -12,18 +12,18 @@ async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
 
     const requiredCheck = validateRequired(body, ["name"]);
     if (!requiredCheck.valid) {
-      return json(400, { error: true, message: requiredCheck.errors.join("; "), field: "name" });
+      return json(400, { success: false, error: true, message: requiredCheck.errors.join("; "), field: "name" });
     }
 
     const slug = slugify(body.slug || body.name);
     if (!slug) {
-      return json(400, { error: true, message: "A valid slug could not be generated. Provide a valid 'slug' or 'name' containing alphanumeric characters.", field: "slug" });
+      return json(400, { success: false, error: true, message: "A valid slug could not be generated. Provide a valid 'slug' or 'name' containing alphanumeric characters.", field: "slug" });
     }
 
     if (body.phone) {
       const phoneResult = validatePhone(body.phone);
       if (!phoneResult.valid) {
-        return json(400, { error: true, message: phoneResult.error, field: "phone" });
+        return json(400, { success: false, error: true, message: phoneResult.error, field: "phone" });
       }
     }
 
@@ -47,9 +47,9 @@ async function handler(event: NetlifyEvent): Promise<NetlifyResponse> {
 
     if (error) throw error;
     mirrorBusinessToSheets(data).catch(() => {});
-    return json(200, data);
+    return json(200, { success: true, business: data });
   } catch (error: any) {
-    return json(500, { error: error.message });
+    return json(500, { success: false, error: error.message });
   }
 }
 

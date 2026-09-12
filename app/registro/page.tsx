@@ -65,13 +65,24 @@ export default function RegistroPage() {
   }, []);
 
   async function checkSlug(value: string) {
-    if (!value.trim()) {
+    const trimmed = value.trim();
+    if (!trimmed) {
       setSlugAvailable(null);
       return;
     }
-    const res = await fetch(`/api/list-businesses?q=${encodeURIComponent(value.trim())}`);
-    const dataRes = await res.json();
-    setSlugAvailable(dataRes.businesses.every((b: any) => b.slug !== value.trim()));
+    try {
+      const res = await fetch(`/api/check-slug?slug=${encodeURIComponent(trimmed)}`);
+      const dataRes = await res.json().catch(() => undefined);
+      // Handle undefined/unexpected responses safely: only treat as available
+      // when the endpoint explicitly returns available === true.
+      if (dataRes && typeof dataRes.available === "boolean") {
+        setSlugAvailable(dataRes.available);
+      } else {
+        setSlugAvailable(false);
+      }
+    } catch {
+      setSlugAvailable(false);
+    }
   }
 
   useEffect(() => {
@@ -130,7 +141,9 @@ export default function RegistroPage() {
         setSubmitting(false);
         return;
       }
-      router.push(`/panel?slug=${encodeURIComponent(buildPayload().slug)}`);
+      const registeredSlug = data.business?.slug || buildPayload().slug;
+      // `new=1` activa el onboarding (SetupChecklist + FirstRunTasks) en el panel.
+      router.push(`/panel?slug=${encodeURIComponent(registeredSlug)}&new=1`);
     } catch (err) {
       setError("Error de conexión. Intenta de nuevo.");
       setSubmitting(false);
