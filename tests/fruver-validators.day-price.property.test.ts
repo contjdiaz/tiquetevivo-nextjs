@@ -101,7 +101,15 @@ describe('Feature: fruver-catalog-quoting, Property 2: Validación del precio de
      * them must be rejected with a descriptive error.
      */
     const coercesToInvalid = (v: unknown) => {
-      const n = Number(v as never);
+      // `Number(v)` throws for values with no primitive coercion (e.g. a
+      // Symbol or an object with a throwing `valueOf`). Those cannot represent
+      // a finite non-negative number, so they belong to the invalid set.
+      let n: number;
+      try {
+        n = Number(v as never);
+      } catch {
+        return true;
+      }
       return !Number.isFinite(n) || n < 0;
     };
 

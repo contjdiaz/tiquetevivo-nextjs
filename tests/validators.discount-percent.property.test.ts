@@ -74,10 +74,12 @@ describe('Feature: fruver-catalog-quoting, Property 6: Validación del porcentaj
      */
     const nonNumericArb = fc.oneof(
       fc.constantFrom(NaN, Infinity, -Infinity, null, undefined),
-      // Strings that are not parseable as finite numbers
+      // Strings that are not parseable as finite numbers. Note: whitespace-only
+      // strings are intentionally excluded — `Number("  ")` is `0`, a valid
+      // percentage — so they do not belong to the "non-numeric" class.
       fc
         .string()
-        .filter((s) => !Number.isFinite(Number(s)) || s.trim() === '')
+        .filter((s) => !Number.isFinite(Number(s)) || s === '')
         .map((s) => (s === '' ? 'not-a-number' : s)),
       fc.constantFrom('abc', 'ten', '12abc', '%50'),
       fc.boolean().map((b) => (b ? {} : [1, 2, 3])),
